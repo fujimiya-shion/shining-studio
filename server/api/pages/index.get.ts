@@ -48,9 +48,11 @@ export default defineEventHandler(async (event) => {
 
   if (search) {
     const pattern = toIlikePattern(search)
-    baseQuery.or = isUuid(search)
-      ? `(name.ilike.${pattern},slug.eq.${search})`
-      : `name.ilike.${pattern}`
+    if (isUuid(search)) {
+      baseQuery.or = `(name.ilike.${pattern},slug.eq.${search})`
+    } else {
+      baseQuery.name = `ilike.${pattern}`
+    }
   }
 
   try {
@@ -72,10 +74,11 @@ export default defineEventHandler(async (event) => {
     const totalPart = contentRange.split('/')[1]
     const parsedTotal = Number.parseInt(totalPart || '0', 10)
     totalItems = Number.isFinite(parsedTotal) ? parsedTotal : pages.length
-  } catch {
+  } catch (error) {
+    const fetchError = error as { statusCode?: number, statusMessage?: string, data?: { message?: string } }
     throw createError({
-      statusCode: 403,
-      statusMessage: 'Cannot load pages. Check RLS policies for pages table.'
+      statusCode: fetchError.statusCode || 500,
+      statusMessage: fetchError.data?.message || fetchError.statusMessage || 'Cannot load pages.'
     })
   }
 

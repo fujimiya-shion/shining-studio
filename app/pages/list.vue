@@ -86,6 +86,10 @@ function onCancelAction() {
 }
 
 async function fetchPages(page = currentPage.value) {
+  if (!searchInput.value.trim()) {
+    activeSearch.value = ''
+  }
+
   isLoading.value = true
 
   try {
@@ -144,6 +148,16 @@ function clearSearch() {
   selectedIds.value = []
   void fetchPages(1)
 }
+
+watch(searchInput, (value) => {
+  if (value.trim() || !activeSearch.value) {
+    return
+  }
+
+  activeSearch.value = ''
+  selectedIds.value = []
+  void fetchPages(1)
+})
 
 function toggleSelectAll(checked: boolean) {
   if (checked) {
