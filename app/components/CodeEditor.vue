@@ -33,8 +33,8 @@ const editorOptions: Monaco.editor.IStandaloneEditorConstructionOptions = {
   glyphMargin: false,
   folding: true,
   wordWrap: 'off',
-  formatOnPaste: true,
-  formatOnType: true,
+  formatOnPaste: false,
+  formatOnType: false,
   bracketPairColorization: {
     enabled: true
   },

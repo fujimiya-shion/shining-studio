@@ -21,10 +21,46 @@ const devices: Array<{ label: string, value: PreviewDevice, widthClass: string }
 const deviceWidthClass = computed(() => {
   return devices.find(device => device.value === props.selectedDevice)?.widthClass ?? 'w-full'
 })
+
+const previewPanelRef = ref<HTMLElement | null>(null)
+const isFullscreen = ref(false)
+
+function syncFullscreenState() {
+  if (!import.meta.client) {
+    return
+  }
+
+  isFullscreen.value = document.fullscreenElement === previewPanelRef.value
+}
+
+async function toggleFullscreen() {
+  if (!import.meta.client) {
+    return
+  }
+
+  if (document.fullscreenElement === previewPanelRef.value) {
+    await document.exitFullscreen()
+    return
+  }
+
+  await previewPanelRef.value?.requestFullscreen()
+}
+
+onMounted(() => {
+  document.addEventListener('fullscreenchange', syncFullscreenState)
+  syncFullscreenState()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', syncFullscreenState)
+})
 </script>
 
 <template>
-  <section class="panel-shell flex h-full min-h-[28rem] min-w-0 w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.08)] lg:min-h-0">
+  <section
+    ref="previewPanelRef"
+    class="panel-shell flex h-full min-h-[28rem] min-w-0 w-full flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.08)] lg:min-h-0"
+  >
     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
       <div>
         <div class="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-600">
@@ -65,6 +101,18 @@ const deviceWidthClass = computed(() => {
             :class="isRefreshing ? 'animate-spin' : ''"
           />
           <span>Refresh</span>
+        </button>
+
+        <button
+          type="button"
+          class="tool-btn tool-btn-surface"
+          @click="toggleFullscreen"
+        >
+          <UIcon
+            :name="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-maximize'"
+            class="size-4"
+          />
+          <span>{{ isFullscreen ? 'Exit fullscreen' : 'Fullscreen' }}</span>
         </button>
       </div>
     </div>

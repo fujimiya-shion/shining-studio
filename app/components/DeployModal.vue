@@ -24,7 +24,7 @@ const open = computed({
     <template #body>
       <div class="space-y-4">
         <p class="text-sm text-gray-600">
-          Your mock deployment is ready. No real API call was made.
+          Your page is saved in Supabase and ready to load again.
         </p>
 
         <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">

@@ -4,12 +4,14 @@ type BuilderStatus = 'draft' | 'preview-ready' | 'deploying' | 'deployed'
 defineProps<{
   status: BuilderStatus
   canDeploy: boolean
+  deployLabel?: string
 }>()
 
 defineEmits<{
   reset: []
   copy: []
   deploy: []
+  logout: []
 }>()
 </script>
 
@@ -36,6 +38,18 @@ defineEmits<{
       </div>
 
       <div class="flex items-center gap-2">
+        <button
+          type="button"
+          class="tool-btn tool-btn-dark"
+          @click="$emit('logout')"
+        >
+          <UIcon
+            name="i-lucide-log-out"
+            class="size-4"
+          />
+          <span>Logout</span>
+        </button>
+
         <button
           type="button"
           class="tool-btn tool-btn-dark hidden sm:inline-flex"
@@ -76,7 +90,7 @@ defineEmits<{
             name="i-lucide-loader-circle"
             class="size-4 animate-spin"
           />
-          <span>{{ status === 'deploying' ? 'Deploying' : 'Deploy' }}</span>
+          <span>{{ status === 'deploying' ? 'Deploying' : (deployLabel || 'Deploy') }}</span>
         </button>
       </div>
     </div>
