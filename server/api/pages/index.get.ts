@@ -23,6 +23,10 @@ function toIlikePattern(value: string) {
   return `*${value.replaceAll('*', '')}*`
 }
 
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
 export default defineEventHandler(async (event) => {
   const { accessToken, user } = await requireAuthSession(event)
   const config = useRuntimeConfig()
@@ -44,7 +48,9 @@ export default defineEventHandler(async (event) => {
 
   if (search) {
     const pattern = toIlikePattern(search)
-    baseQuery.or = `(name.ilike.${pattern},slug.ilike.${pattern})`
+    baseQuery.or = isUuid(search)
+      ? `(name.ilike.${pattern},slug.eq.${search})`
+      : `name.ilike.${pattern}`
   }
 
   try {
