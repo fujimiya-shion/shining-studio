@@ -31,6 +31,6 @@ export default defineNuxtConfig({
   },
 
   monacoEditor: {
-    locale: 'en',
+    locale: 'en'
   }
 })
