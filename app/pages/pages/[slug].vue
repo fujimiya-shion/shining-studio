@@ -19,6 +19,14 @@ const page = computed(() => data.value?.page)
 useHead(() => ({
   title: page.value?.name || 'Page'
 }))
+
+useSeoMeta({
+  title: () => page.value?.name || 'Page',
+  ogTitle: () => page.value?.name || 'Page',
+  twitterTitle: () => page.value?.name || 'Page',
+  description: () => `Public page ${page.value?.name || 'Untitled page'}`,
+  ogDescription: () => `Public page ${page.value?.name || 'Untitled page'}`
+})
 </script>
 
 <template>

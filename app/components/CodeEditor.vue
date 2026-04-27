@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type * as Monaco from 'monaco-editor'
-
 const props = defineProps<{
   modelValue: string
   autoPreviewEnabled?: boolean
@@ -17,7 +15,15 @@ const lineCount = computed(() => {
 
 const characterCount = computed(() => props.modelValue.length)
 
-const editorOptions: Monaco.editor.IStandaloneEditorConstructionOptions = {
+type MonacoActionLike = {
+  run: () => Promise<void> | void
+}
+
+type MonacoEditorLike = {
+  getAction: (id: string) => MonacoActionLike | null | undefined
+}
+
+const editorOptions = {
   automaticLayout: true,
   theme: 'vs-dark',
   fontSize: 13,
@@ -45,9 +51,9 @@ const editorOptions: Monaco.editor.IStandaloneEditorConstructionOptions = {
   fontFamily: 'JetBrains Mono, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace'
 }
 
-const monacoEditor = shallowRef<Monaco.editor.IStandaloneCodeEditor>()
+const monacoEditor = shallowRef<MonacoEditorLike>()
 
-function handleEditorLoad(editor: Monaco.editor.IStandaloneCodeEditor) {
+function handleEditorLoad(editor: MonacoEditorLike) {
   monacoEditor.value = editor
 }
 
@@ -114,10 +120,10 @@ async function formatDocument() {
     <MonacoEditor
       :model-value="modelValue"
       lang="html"
-      :options="editorOptions"
+      :options="editorOptions as any"
       class="min-h-[24rem] flex-1 overflow-hidden bg-slate-950 lg:min-h-0"
       @update:model-value="emit('update:modelValue', $event)"
-      @load="handleEditorLoad"
+      @load="handleEditorLoad as any"
     >
       <div class="flex min-h-[24rem] items-center justify-center bg-slate-950 text-sm text-slate-500 lg:min-h-0 lg:h-full">
         Loading editor...

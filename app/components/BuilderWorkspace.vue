@@ -144,6 +144,8 @@ const DEFAULT_HTML = `<!doctype html>
 const htmlCode = ref('')
 const previewHtml = ref('')
 const pageName = ref('Untitled page')
+const baselineHtml = ref('')
+const baselinePageName = ref('Untitled page')
 const status = ref<BuilderStatus>('draft')
 const selectedDevice = ref<PreviewDevice>('desktop')
 const showDeployModal = ref(false)
@@ -218,16 +220,64 @@ function schedulePreviewUpdate(showRefreshOverlay = false) {
 }
 
 function loadExample() {
-  currentSlug.value = ''
   pageName.value = extractNameFromHtml(DEFAULT_HTML)
   htmlCode.value = DEFAULT_HTML
   previewHtml.value = showLivePreview.value ? DEFAULT_HTML : ''
   activeMobilePanel.value = 'code'
+  setPreviewStatus()
+}
+
+function resetToBaseline() {
+  pageName.value = baselinePageName.value
+  htmlCode.value = baselineHtml.value
+  previewHtml.value = showLivePreview.value ? baselineHtml.value : ''
+  activeMobilePanel.value = 'code'
+  setPreviewStatus()
+}
+
+function initializeBlankDraft() {
+  pageName.value = 'Untitled page'
+  htmlCode.value = ''
+  previewHtml.value = ''
+  activeMobilePanel.value = 'code'
   status.value = 'draft'
 }
 
+function updateBaseline(html: string, name: string) {
+  baselineHtml.value = html
+  baselinePageName.value = name || 'Untitled page'
+}
+
+function ensureSeoTitle(html: string, title: string) {
+  const normalizedTitle = title.trim() || 'Untitled page'
+  const escapedTitle = normalizedTitle
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+
+  if (/<title>[\s\S]*?<\/title>/i.test(html)) {
+    return html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapedTitle}</title>`)
+  }
+
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head[^>]*>/i, match => `${match}\n    <title>${escapedTitle}</title>`)
+  }
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escapedTitle}</title>
+  </head>
+  <body>
+${html}
+  </body>
+</html>`
+}
+
 function resetBuilder() {
-  loadExample()
+  resetToBaseline()
 }
 
 async function copyToClipboard(value: string, successMessage: string) {
@@ -264,12 +314,16 @@ async function loadPageBySlug(slug: string) {
 
   try {
     const response = await $fetch<{ page: PageRecord }>(`/api/pages/${slug}`)
+    const resolvedContent = response.page.content || ''
+    const resolvedName = response.page.name || 'Untitled page'
+
     currentSlug.value = response.page.slug
-    pageName.value = response.page.name
-    htmlCode.value = response.page.content || DEFAULT_HTML
+    pageName.value = resolvedName
+    htmlCode.value = resolvedContent
     previewHtml.value = showLivePreview.value ? htmlCode.value : ''
     status.value = 'deployed'
     activeMobilePanel.value = 'code'
+    updateBaseline(resolvedContent, resolvedName)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to load page.'
     toast.add({
@@ -295,6 +349,7 @@ async function deployPage() {
   status.value = 'deploying'
 
   const normalizedName = pageName.value.trim() || extractNameFromHtml(htmlCode.value)
+  const normalizedContent = ensureSeoTitle(htmlCode.value, normalizedName)
 
   try {
     let response: { page: PageRecord }
@@ -304,7 +359,7 @@ async function deployPage() {
         method: 'PUT',
         body: {
           name: normalizedName,
-          content: htmlCode.value
+          content: normalizedContent
         }
       })
     } else {
@@ -312,7 +367,7 @@ async function deployPage() {
         method: 'POST',
         body: {
           name: normalizedName,
-          content: htmlCode.value
+          content: normalizedContent
         }
       })
     }
@@ -323,6 +378,7 @@ async function deployPage() {
     previewHtml.value = showLivePreview.value ? htmlCode.value : ''
     status.value = 'deployed'
     showDeployModal.value = true
+    updateBaseline(response.page.content, response.page.name)
   } catch (error) {
     status.value = 'preview-ready'
     const message = error instanceof Error ? error.message : 'Deploy failed.'
@@ -357,14 +413,16 @@ onMounted(async () => {
     return
   }
 
-  loadExample()
+  initializeBlankDraft()
+  updateBaseline('', 'Untitled page')
 })
 
 watch(() => props.initialSlug, async (slug) => {
   const normalized = slug?.trim() || ''
 
   if (!normalized) {
-    loadExample()
+    initializeBlankDraft()
+    updateBaseline('', 'Untitled page')
     return
   }
 
