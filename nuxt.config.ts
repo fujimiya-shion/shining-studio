@@ -1,4 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { defineNuxtConfig } from 'nuxt/config'
+
 export default defineNuxtConfig({
   modules: [
     '@nuxt/eslint',
@@ -14,8 +16,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     supabaseUrl: process.env.SUPABASE_URL || '',
-    supabaseKey: process.env.SUPABASE_KEY || '',
-    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    supabaseKey: process.env.SUPABASE_KEY || ''
   },
 
   compatibilityDate: '2025-01-15',
@@ -30,6 +31,6 @@ export default defineNuxtConfig({
   },
 
   monacoEditor: {
-    locale: 'en'
+    locale: 'en',
   }
 })
