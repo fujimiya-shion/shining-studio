@@ -15,26 +15,42 @@ function parsePage(value: unknown) {
   return Number.isFinite(page) && page > 0 ? page : 1
 }
 
+function parseSearch(value: unknown) {
+  return String(value || '').trim()
+}
+
+function toIlikePattern(value: string) {
+  return `*${value.replaceAll('*', '')}*`
+}
+
 export default defineEventHandler(async (event) => {
   const { accessToken, user } = await requireAuthSession(event)
   const config = useRuntimeConfig()
   const userId = user.id
   const query = getQuery(event)
   const page = parsePage(query.page)
+  const search = parseSearch(query.search)
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
   let pages: PageListItem[] = []
   let totalItems = 0
+  const baseQuery: Record<string, string | number> = {
+    select: 'id,slug,name,created_at,updated_at',
+    user_id: `eq.${userId}`,
+    deleted_at: 'is.null',
+    order: 'updated_at.desc'
+  }
+
+  if (search) {
+    const pattern = toIlikePattern(search)
+    baseQuery.or = `(name.ilike.${pattern},slug.ilike.${pattern})`
+  }
 
   try {
     const response = await $fetch.raw<PageListItem[]>(`${config.supabaseUrl}/rest/v1/pages`, {
       method: 'GET',
-      query: {
-        select: 'id,slug,name,created_at,updated_at',
-        user_id: `eq.${userId}`,
-        order: 'updated_at.desc'
-      },
+      query: baseQuery,
       headers: {
         'apikey': config.supabaseKey,
         'Authorization': `Bearer ${accessToken}`,

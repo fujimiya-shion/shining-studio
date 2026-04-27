@@ -52,6 +52,12 @@ select {
   font: inherit;
 }
 
+input[type="checkbox"].light-checkbox {
+  color-scheme: light;
+  accent-color: #0284c7;
+  background-color: #fff;
+}
+
 button {
   cursor: pointer;
 }

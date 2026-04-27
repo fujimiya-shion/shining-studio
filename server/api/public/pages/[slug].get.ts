@@ -34,6 +34,7 @@ export default defineEventHandler(async (event) => {
       query: {
         select: 'slug,name,content',
         slug: `eq.${slug}`,
+        deleted_at: 'is.null',
         limit: 1
       },
       headers: {

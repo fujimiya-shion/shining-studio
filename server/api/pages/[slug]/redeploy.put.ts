@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
       query: {
         slug: `eq.${slug}`,
         user_id: `eq.${userId}`,
+        deleted_at: 'is.null',
         select: 'id,slug,name,content,created_at,updated_at'
       },
       headers: {

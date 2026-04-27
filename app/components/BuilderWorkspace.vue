@@ -149,6 +149,8 @@ const baselinePageName = ref('Untitled page')
 const status = ref<BuilderStatus>('draft')
 const selectedDevice = ref<PreviewDevice>('desktop')
 const showDeployModal = ref(false)
+const showLogoutConfirm = ref(false)
+const isLoggingOut = ref(false)
 const activeMobilePanel = ref<MobilePanel>('code')
 const isPreviewRefreshing = ref(false)
 const showLivePreview = ref(true)
@@ -391,12 +393,23 @@ async function deployPage() {
 }
 
 async function logout() {
-  if (import.meta.client && !window.confirm('Sign out from Shining Studio?')) {
+  showLogoutConfirm.value = true
+}
+
+async function confirmLogout() {
+  if (isLoggingOut.value) {
     return
   }
 
-  await $fetch('/api/auth/logout', { method: 'POST' })
-  await navigateTo('/login')
+  isLoggingOut.value = true
+
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' })
+    await navigateTo('/login')
+  } finally {
+    isLoggingOut.value = false
+    showLogoutConfirm.value = false
+  }
 }
 
 function refreshPreview() {
@@ -611,6 +624,17 @@ onBeforeUnmount(() => {
       v-model="showDeployModal"
       :deploy-url="deployUrl"
       @copy-url="copyToClipboard(deployUrl, 'Page URL copied')"
+    />
+
+    <ConfirmModal
+      v-model="showLogoutConfirm"
+      title="Sign out"
+      description="Sign out from Shining Studio?"
+      confirm-label="Sign out"
+      cancel-label="Stay"
+      :loading="isLoggingOut"
+      confirm-color="warning"
+      @confirm="confirmLogout"
     />
   </div>
 </template>
