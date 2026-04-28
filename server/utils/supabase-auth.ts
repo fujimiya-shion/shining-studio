@@ -2,6 +2,7 @@ import type { H3Event } from 'h3'
 
 const ACCESS_COOKIE = 'sb-access-token'
 const REFRESH_COOKIE = 'sb-refresh-token'
+const ACCESS_TOKEN_REFRESH_WINDOW_SECONDS = 120
 
 export function getSupabaseConfig() {
   const config = useRuntimeConfig()
@@ -124,11 +125,62 @@ export async function getUserFromAccessToken(accessToken: string) {
   })
 }
 
+function parseJwtExpiry(accessToken: string) {
+  try {
+    const payload = accessToken.split('.')[1]
+    if (!payload) {
+      return null
+    }
+
+    const normalized = payload.replaceAll('-', '+').replaceAll('_', '/')
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4)
+    const decoded = Buffer.from(padded, 'base64').toString('utf-8')
+    const parsed = JSON.parse(decoded) as { exp?: number }
+
+    return typeof parsed.exp === 'number' ? parsed.exp : null
+  } catch {
+    return null
+  }
+}
+
+function shouldRefreshAccessToken(accessToken: string) {
+  const exp = parseJwtExpiry(accessToken)
+  if (!exp) {
+    return false
+  }
+
+  const now = Math.floor(Date.now() / 1000)
+  return exp - now <= ACCESS_TOKEN_REFRESH_WINDOW_SECONDS
+}
+
+async function refreshSession(event: H3Event, refreshToken: string): Promise<AuthSession | null> {
+  try {
+    const refreshed = await refreshWithToken(refreshToken)
+    setAuthCookies(event, refreshed.access_token, refreshed.refresh_token, refreshed.expires_in)
+    const user = await getUserFromAccessToken(refreshed.access_token)
+
+    return {
+      accessToken: refreshed.access_token,
+      user
+    }
+  } catch {
+    clearAuthCookies(event)
+    return null
+  }
+}
+
 export async function resolveAuthSession(event: H3Event): Promise<AuthSession | null> {
   const { accessToken, refreshToken } = readAuthCookies(event)
 
   if (!accessToken) {
     return null
+  }
+
+  if (shouldRefreshAccessToken(accessToken) && refreshToken) {
+    const refreshedSession = await refreshSession(event, refreshToken)
+    if (refreshedSession) {
+      return refreshedSession
+    }
   }
 
   try {
@@ -143,19 +195,7 @@ export async function resolveAuthSession(event: H3Event): Promise<AuthSession | 
       return null
     }
 
-    try {
-      const refreshed = await refreshWithToken(refreshToken)
-      setAuthCookies(event, refreshed.access_token, refreshed.refresh_token, refreshed.expires_in)
-      const user = await getUserFromAccessToken(refreshed.access_token)
-
-      return {
-        accessToken: refreshed.access_token,
-        user
-      }
-    } catch {
-      clearAuthCookies(event)
-      return null
-    }
+    return await refreshSession(event, refreshToken)
   }
 }
 
